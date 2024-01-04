@@ -3,6 +3,7 @@ const ora = require('ora');
 const error = require('../utils/error');
 const duplicateEntry = require('../utils/duplicateEntry');
 const constants = require('../shared/constants');
+const fs = require('fs');
 
 const spinner = ora();
 
@@ -67,12 +68,25 @@ const duplicateEntries = async (
     spinner.info(`Start duplcate entries : [${entries}]`);
 
     entries.forEach((entryId) => {
+      const duplicatedEntries = {};
       duplicateEntry(entryId, sourceEnv, publish, exclude, singleLevel, targetEnv,
-        prefix, suffix, regex, replaceStr, targetContentTypes).then((entry) => {
-        const entryNameObj = entry.fields.name;
-        const firstKeyName = Object.keys(entry.fields.name)[0];
+        prefix, suffix, regex, replaceStr, targetContentTypes, duplicatedEntries).then((entry) => {
+          //const entryNameObj = entry.fields.name;
+          //const firstKeyName = Object.keys(entry.fields.name)[0];
 
-        spinner.info(`Duplicate entry ${entryId} successfully. New entry #${entry.sys.id} - ${entryNameObj[firstKeyName]}`);
+          spinner.info(`Duplicate entry ${entryId} successfully. New entry #${entry.sys.id} - ${entry.fields.title}`);
+
+          const dataToWrite = Object.keys(duplicatedEntries).map(function(k){
+            return [k, duplicatedEntries[k]].join(',');
+          }).join('\n');
+
+          fs.writeFile('./result.csv', dataToWrite, 'utf8', function (err) {
+            if (err) {
+              spinner.error('Some error occured - file either not saved or corrupted file saved.');
+            } else{
+              spinner.info('It\'s saved!');
+            }
+          });
       });
     });
   } else {
