@@ -65,26 +65,46 @@ const duplicateEntry = async (
         for (const fieldContentKey of Object.keys(fieldContent)) {
           const fieldContentValue = fieldContent[fieldContentKey];
 
-          if (!isSingleLevel && Array.isArray(fieldContentValue)) {
-            for (const [contentIndex, content] of fieldContentValue.entries()) {
-              if (content.sys.type === constants.LINK_TYPE
-                  && !exclude.includes(content.sys.id)) {
-                if (duplicatedEntries[content.sys.id]) {
-                  spinner.info(`NOT duplicating sub entry #${content.sys.id}`);
-                  fieldContentValue[contentIndex].sys.id = duplicatedEntries[content.sys.id];
+          if (!isSingleLevel) {
+            if (Array.isArray(fieldContentValue)) {
+              for (const [contentIndex, content] of fieldContentValue.entries()) {
+                if (content.sys.type === constants.LINK_TYPE
+                    && !exclude.includes(content.sys.id)) {
+                  spinner.info(field, fieldContentValue);
+                  if (duplicatedEntries[content.sys.id]) {
+                    spinner.info(`NOT duplicating sub entry #${content.sys.id}`);
+                    fieldContentValue[contentIndex].sys.id = duplicatedEntries[content.sys.id];
+                    }
+                  else {
+                    spinner.info(`Duplicating sub entry #${content.sys.id}`);
+
+                    const duplicatedEntry = await duplicateEntry(
+                      content.sys.id, environment, publish, exclude, isSingleLevel, targetEnvironment,
+                      prefix, suffix, regex, replaceStr, targetContentTypes, duplicatedEntries, content.sys.linkType
+                    );
+                    fieldContentValue[contentIndex].sys.id = duplicatedEntry.sys.id;
                   }
-                else {
-                  spinner.info(`Duplicating sub entry #${content.sys.id}`);
-
-                  const duplicatedEntry = await duplicateEntry(
-                    content.sys.id, environment, publish, exclude, isSingleLevel, targetEnvironment,
-                    prefix, suffix, regex, replaceStr, targetContentTypes, duplicatedEntries, content.sys.linkType
-                  );
-                  fieldContentValue[contentIndex].sys.id = duplicatedEntry.sys.id;
-
-
                 }
               }
+            }
+            else if (typeof fieldContentValue === 'object') {
+              if (fieldContentValue.sys?.type === constants.LINK_TYPE
+                    && !exclude.includes(fieldContentValue.sys.id)) {
+                  spinner.info(field, fieldContentValue);
+                  if (duplicatedEntries[fieldContentValue.sys.id]) {
+                    spinner.info(`NOT duplicating sub entry #${fieldContentValue.sys.id}`);
+                    fieldContentValue.sys.id = duplicatedEntries[fieldContentValue.sys.id];
+                    }
+                  else {
+                    spinner.info(`Duplicating sub entry #${fieldContentValue.sys.id}`);
+
+                    const duplicatedEntry = await duplicateEntry(
+                      fieldContentValue.sys.id, environment, publish, exclude, isSingleLevel, targetEnvironment,
+                      prefix, suffix, regex, replaceStr, targetContentTypes, duplicatedEntries, fieldContentValue.sys.linkType
+                    );
+                    fieldContentValue.sys.id = duplicatedEntry.sys.id;
+                  }
+                }
             }
           }
 
